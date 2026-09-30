@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=845c5474-02db-43e6-a906-18541bc38089
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+  <title>SCOLAR.TRACK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root { 
+      --bg: #fdfdfd; --card: #ffffff; --text: #0f172a; 
+      --muted: #64748b; --border: #e2e8f0; --accent: #2563eb; 
+      --success: #10b981; --shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    #login-screen {
+      position:fixed; inset:0;
+      display:flex; flex-direction:column;
+      justify-content:center; align-items:center;
+      background:#f8fafc;
+      z-index:100;
+    }
+    #login-screen h1 {
+      font-size:2.6rem; font-weight:800; letter-spacing:-1.5px; margin-bottom:10px;
+    }
+    #login-screen p {
+      color:var(--muted); margin-bottom:24px;
+    }
+    #login-screen button {
+      padding:14px 22px; border:none; border-radius:14px;
+      background:#000; color:#fff; font-size:1rem; font-weight:700;
+      cursor:pointer;
+    }
+
+    #app { display:none; }
+    body.app-on { display:flex; }
+
+    nav { 
+      width: 280px; background: #fff; border-right: 1px solid var(--border); 
+      padding: 40px 24px; display: flex; flex-direction: column; gap: 10px; 
+      position: fixed; height: 100vh; justify-content:flex-start;
+      top:0; left:0;
+    }
+    .logo { font-weight: 800; font-size: 1.6rem; letter-spacing: -1.5px; margin-bottom: 40px; color: #000; }
+    .nav-btn { 
+      padding: 14px 18px; border-radius: 12px; cursor: pointer; font-weight: 600; 
+      transition: 0.2s; color: var(--muted); border: none; background: none; text-align: left;
+    }
+    .nav-btn:hover { background: #f1f5f9; color: var(--text); }
+    .nav-btn.active { background: #000; color: #fff; }
+
+    main {
+      flex: 1;
+      margin-left: 280px;
+      padding: 40px;
+      width: calc(100% - 280px);
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    .header { margin-bottom: 40px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); padding: 30px; border-radius: 24px; box-shadow: var(--shadow); }
+    .stat-label { font-size: 0.85rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-val { font-size: 2.4rem; font-weight: 800; margin-top: 8px; display: flex; align-items: baseline; gap: 8px; }
+
+    .chart-box { background: #fff; border: 1px solid var(--border); padding: 30px; border-radius: 24px; box-shadow: var(--shadow); margin-bottom: 40px; }
+    .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 16px; flex-wrap:wrap; }
+    .chart-head-right { display: flex; gap: 10px; align-items: center; flex-wrap:wrap; }
+    .chart-container { height: 420px; }
+
+    .time-filter { display:flex; align-items:center; gap:8px; }
+    .time-filter button { border:none; background:#f1f5f9; border-radius:999px; width:32px; height:32px; cursor:pointer; font-weight:700; }
+    .time-filter select { width:auto; }
+
+    .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+    .m-card { 
+      background: #fff; border: 1px solid var(--border); padding: 25px; border-radius: 22px; 
+      cursor: pointer; transition: 0.2s; box-shadow: var(--shadow); border-top: 6px solid;
+    }
+    .m-card:hover { transform: translateY(-5px); border-color: #000; }
+
+    .btn { padding: 14px 18px; border-radius: 14px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
+    .btn-p { background: #000; color: #fff; }
+    .btn-s { background: #f1f5f9; color: var(--muted); }
+
+    .modal-overlay { 
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); 
+      backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000; 
+    }
+    .modal-bottom { 
+      background: #fff; padding: 32px; border-radius: 32px 32px 0 0; 
+      width: 100%; max-width: 640px; box-shadow: 0 -20px 40px rgba(0,0,0,0.25);
+    }
+    .modal { 
+      background: #fff; padding: 32px; border-radius: 32px; 
+      width: 100%; max-width: 720px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+
+    input, select { 
+      width: 100%; padding: 14px; background: #f8fafc; border: 1px solid var(--border); 
+      border-radius: 14px; margin: 10px 0 18px; outline: none; font-size: 0.95rem; font-weight: 500;
+    }
+
+    .subject-layout { display:grid; grid-template-columns: 1fr; gap:24px; align-items:flex-start; }
+    .subject-evals { background:#fff; border:1px solid var(--border); border-radius:24px; padding:24px; box-shadow:var(--shadow); }
+    .subject-evals-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .subject-evals-list { max-height:520px; overflow-y:auto; border-top:1px solid var(--border); margin-top:10px; }
+    .subject-eval-item { padding:14px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+    .subject-eval-top { display:flex; justify-content:space-between; gap:12px; }
+    .subject-eval-meta { font-size:0.8rem; color:var(--muted); margin-top:4px; }
+
+    .cat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      font-size: 0.8rem;
+      margin: 4px 4px 0 0;
+    }
+    .cat-pill button {
+      border: none; background: transparent; cursor: pointer; font-size: 0.8rem; color: #ef4444;
+    }
+
+    @media screen and (max-width: 900px) {
+      body.app-on {
+        display:block;
+      }
+
+      nav {
+        position:fixed;
+        top:0;
+        left:0;
+        width:100%;
+        height:auto;
+        padding:12px 16px;
+        border-right:none;
+        border-bottom:1px solid var(--border);
+        flex-direction:row;
+        align-items:center;
+        justify-content:space-between;
+      }
+
+      nav > div:first-child {
+        display:flex;
+        align-items:center;
+        gap:12px;
+      }
+
+      .logo {
+        margin-bottom:0;
+        font-size:1.3rem;
+      }
+
+      .nav-btn {
+        padding:8px 12px;
+        font-size:0.85rem;
+      }
+
+      main {
+        margin-left:0;
+        padding:120px 16px 24px;
+        width:100%;
+      }
+
+      .stats-row {
+        grid-template-columns:1fr;
+        gap:16px;
+      }
+
+      .grid-list {
+        grid-template-columns:1fr;
+      }
+
+      .chart-container {
+        height:300px;
+      }
+
+      .header {
+        flex-direction:column;
+        align-items:flex-start;
+        gap:8px;
+      }
+
+      .header h1 {
+        font-size:1.7rem;
+      }
+
+      .m-card {
+        padding:18px;
+      }
+
+      .modal-bottom, .modal {
+        width:95%;
+        max-width:none;
+        border-radius:20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stat-val {
+        font-size:1.8rem;
+      }
+      .header h1 {
+        font-size:1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="login-screen">
+    <h1>SCOLAR.TRACK</h1>
+    <p>Connecte-toi avec Google pour accéder à ton tableau de bord.</p>
+    <button id="btn-login">Connexion Google</button>
+  </div>
+
+  <div id="app">
+    <nav>
+      <div>
+        <div class="logo">SCOLAR.TRACK</div>
+        <button class="nav-btn active" onclick="showV('dash')">Tableau de Bord</button>
+        <button class="nav-btn" onclick="showV('set')">Paramètres & Matières</button>
+      </div>
+    </nav>
+
+    <main id="view-dash">
+      <div class="header">
+        <h1>Vue d'ensemble</h1>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="stat-label">Moyenne</span>
+          <div class="stat-val">
+            <span id="g-avg">0</span>
+            <small style="font-size: 1.2rem; color: var(--muted)" id="g-avg-scale">/ 20</small>
+          </div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Réussite</span>
+          <div class="stat-val" id="g-perc" style="color: var(--success)">0%</div>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Nombre d'éval</span>
+          <div class="stat-val" id="g-count">0</div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-head">
+          <span class="stat-label">Évolution des performances (ligne par date)</span>
+          <div class="chart-head-right">
+            <select id="f-view" onchange="onFilterChange()" style="width:auto; margin:0;">
+              <option value="global">Moyenne globale</option>
+              <option value="all">Toutes les matières</option>
+            </select>
+            <select id="f-type" onchange="onFilterChange()" style="width:auto; margin:0; display:none;">
+              <option value="all">Tous les types</option>
+            </select>
+            <div class="time-filter">
+              <button type="button" onclick="changeRange(-1)">◀</button>
+              <select id="time-mode" onchange="resetRange()" style="width:auto;">
+                <option value="day">Jour</option>
+                <option value="week">Semaine</option>
+                <option value="month" selected>Mois</option>
+                <option value="year">Année civile</option>
+                <option value="school">Année scolaire</option>
+              </select>
+              <button type="button" onclick="changeRange(1)">▶</button>
+            </div>
+          </div>
+        </div>
+        <div class="chart-container"><canvas id="mainChart"></canvas></div>
+      </div>
+
+      <div class="grid-list" id="m-list"></div>
+    </main>
+
+    <main id="view-subject" style="display:none;">
+      <div class="header">
+        <div>
+          <h1 id="sub-title">Matière</h1>
+          <p style="color:var(--muted); font-size:0.9rem;" id="sub-subtitle"></p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-s" onclick="showV('dash')">← Retour</button>
+          <button class="btn btn-s" style="color:#ef4444;" onclick="askDeleteSubject()">Supprimer la matière</button>
+        </div>
+      </div>
+
+      <div class="subject-layout">
+        <div class="subject-evals">
+          <div class="subject-evals-header">
+            <div>
+              <span class="stat-label">Évaluations</span>
+            </div>
+            <button class="btn btn-p" style="width:auto;" onclick="openEvalModal()">+ Ajouter un test</button>
+          </div>
+          <div class="subject-evals-list" id="subject-evals-list"></div>
+        </div>
+      </div>
+    </main>
+
+    <main id="view-set" style="display:none;">
+      <div class="header"><h1>Paramètres & Matières</h1></div>
+
+      <div class="stat-card" style="max-width: 700px; margin-bottom:24px;">
+        <label class="stat-label">Créer une nouvelle matière</label>
+        <input type="text" id="in-m-name" placeholder="Nom de la matière (ex: Anglais)">
+        <label class="stat-label">Couleur d'identification</label>
+        <input type="color" id="in-m-color" value="#2563eb" style="height:60px; padding:5px;">
+        <button class="btn btn-p" onclick="addM()">Enregistrer la matière</button>
+      </div>
+
+      <div class="stat-card" style="max-width: 700px; margin-bottom:24px;">
+        <label class="stat-label">Barème Global de référence</label>
+        <input type="number" id="cfg-scale" value="20" onchange="updateConfig()">
+      </div>
+
+      <div class="stat-card" style="max-width: 700px;">
+        <label class="stat-label">Activer les catégories (Formatif / Sommatif)</label>
+        <div style="display:flex; align-items:center; gap:10px; margin:10px 0 18px;">
+          <input type="checkbox" id="cfg-use-cats" onchange="toggleCats()" style="width:auto;">
+          <span style="color:var(--muted); font-size:0.9rem;">Quand désactivé, aucun type n'est demandé.</span>
+        </div>
+        <div id="cats-block" style="display:none;">
+          <label class="stat-label">Catégories d'évaluation</label>
+          <div id="cat-list" style="margin-bottom:16px;"></div>
+          <input type="text" id="cat-new" placeholder="Nouvelle catégorie (ex : Oral)">
+          <button class="btn btn-p" onclick="addCat()">Ajouter une catégorie</button>
+        </div>
+      </div>
+
+      <div class="stat-card" style="max-width: 700px; margin-top:24px;">
+        <label class="stat-label">Déconnexion</label>
+        <button class="btn btn-s" style="color:#ef4444; margin-top:10px;" onclick="logoutFromSettings()">
+          Se déconnecter
+        </button>
+      </div>
+    </main>
+
+    <div id="modal-eval" class="modal-overlay">
+      <div class="modal-bottom">
+        <h2 style="margin-bottom:16px; letter-spacing:-1px;">Nouvelle évaluation</h2>
+        <input type="text" id="in-n-t" placeholder="Titre de l'évaluation">
+        <div id="type-block" style="display:none;">
+          <label class="stat-label">Type d'évaluation</label>
+          <select id="in-n-type"></select>
+        </div>
+        <div style="display:flex; gap:12px">
+          <input type="number" id="in-n-v" placeholder="Note">
+          <input type="number" id="in-n-m" placeholder="Sur...">
+        </div>
+        <input type="date" id="in-n-d">
+        <button class="btn btn-p" onclick="addN()">Ajouter la note</button>
+        <button class="btn btn-s" style="margin-top:10px;" onclick="closeEvalModal()">Annuler</button>
+      </div>
+    </div>
+
+    <div id="modal-eval-detail" class="modal-overlay">
+      <div class="modal">
+        <h2 id="detail-title" style="margin-bottom:8px;"></h2>
+        <p id="detail-meta" style="font-size:0.9rem; margin-bottom:16px;"></p>
+        <div style="margin-top:16px; display:flex; justify-content:space-between; gap:10px;">
+          <button class="btn btn-s" onclick="closeEvalDetail()">Fermer</button>
+          <button class="btn btn-s" style="color:#ef4444;" onclick="askDeleteEval()">Supprimer ce test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { 
+      getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import { 
+      getFirestore, doc, setDoc, getDoc 
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDy7cx3D7j_ztBjgo2gglbacEzjw7kd_A8",
+      authDomain: "scolar-track.firebaseapp.com",
+      projectId: "scolar-track",
+      storageBucket: "scolar-track.firebasestorage.app",
+      messagingSenderId: "992917034328",
+      appId: "1:992917034328:web:1de3881b572f7c714c812d",
+      measurementId: "G-EFCQJZ300E"
+    };
+
+    const appFB = initializeApp(firebaseConfig);
+    const auth = getAuth(appFB);
+    const db = getFirestore(appFB);
+    const provider = new GoogleAuthProvider();
+
+    const loginScreen = document.getElementById("login-screen");
+    const appScreen = document.getElementById("app");
+    const btnLogin = document.getElementById("btn-login");
+
+    let user = null;
+    let data = {
+      m: [],
+      scale: 20,
+      useCats: false,
+      cats: ['Formatif', 'Sommatif']
+    };
+    let activeId = null;
+    let activeEvalIndex = null;
+    let globalChart = null;
+    let rangeOffset = 0;
+
+    btnLogin.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (e) {
+        alert("Erreur de connexion Google");
+      }
+    };
+
+    window.logoutFromSettings = function() {
+      signOut(auth);
+    };
+
+    onAuthStateChanged(auth, async (u) => {
+      user = u;
+      if (!user) {
+        document.body.classList.remove('app-on');
+        loginScreen.style.display = "flex";
+        appScreen.style.display = "none";
+        data = { m: [], scale: 20, useCats: false, cats: ['Formatif','Sommatif'] };
+        if(globalChart) globalChart.destroy();
+        return;
+      }
+
+      document.body.classList.add('app-on');
+      loginScreen.style.display = "none";
+      appScreen.style.display = "block";
+
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        data = snap.data();
+      } else {
+        await setDoc(ref, data);
+      }
+      renderDash();
+    });
+
+    async function saveUserData() {
+      if(!user) return;
+      const ref = doc(db, "users", user.uid);
+      await setDoc(ref, data, { merge: true });
+    }
+
+    window.showV = function(id) {
+      document.getElementById('view-dash').style.display = id==='dash'?'block':'none';
+      document.getElementById('view-set').style.display = id==='set'?'block':'none';
+      document.getElementById('view-subject').style.display = id==='subject'?'block':'none';
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        const txt = b.innerText.toLowerCase();
+        b.classList.toggle('active', 
+          (id==='dash' && txt.includes('tableau')) ||
+          (id==='set' && txt.includes('paramètres'))
+        );
+      });
+      if(id==='dash') renderDash();
+      if(id==='set') {
+        document.getElementById('cfg-use-cats').checked = !!data.useCats;
+        toggleCats(false);
+      }
+    };
+
+    window.updateConfig = async function() {
+      data.scale = parseFloat(document.getElementById('cfg-scale').value) || 20;
+      await saveUserData();
+      renderDash();
+    };
+
+    window.toggleCats = async function(update = true) {
+      const use = document.getElementById('cfg-use-cats').checked;
+      data.useCats = use;
+      document.getElementById('cats-block').style.display = use ? 'block' : 'none';
+      document.getElementById('f-type').style.display = use ? 'inline-block' : 'none';
+      document.getElementById('type-block').style.display = use ? 'block' : 'none';
+      if(use) renderCats();
+      if(update) { await saveUserData(); renderDash(); }
+    };
+
+    window.addCat = async function() {
+      const val = document.getElementById('cat-new').value.trim();
+      if(!val) return;
+      if(data.cats.includes(val)) return;
+      data.cats.push(val);
+      document.getElementById('cat-new').value = "";
+      await saveUserData();
+      renderCats();
+    };
+
+    window.deleteCat = async function(name) {
+      if(data.cats.length <= 1) return;
+      data.cats = data.cats.filter(c => c !== name);
+      await saveUserData();
+      renderCats();
+    };
+
+    function renderCats() {
+      const container = document.getElementById('cat-list');
+      container.innerHTML = data.cats.map(c => `
+        <span class="cat-pill">
+          ${c}
+          ${data.cats.length > 1 ? `<button type="button" onclick="deleteCat('${c.replace(/'/g,"\\'")}')">×</button>` : ''}
+        </span>
+      `).join('');
+    }
+
+    window.addM = async function() {
+      if(!user) { alert("Connecte-toi avec Google d'abord."); return; }
+      const name = document.getElementById('in-m-name').value.trim();
+      const color = document.getElementById('in-m-color').value;
+      if(!name) return;
+      data.m.push({ id: Date.now(), name, color, notes: [] });
+      document.getElementById('in-m-name').value = "";
+      await saveUserData();
+      renderDash();
+    };
+
+    window.openSubject = function(id) {
+      activeId = id;
+      const m = data.m.find(x => x.id === id);
+      if(!m) return;
+      document.getElementById('sub-title').innerText = m.name;
+      const total = m.notes.length;
+      const avg = total ? m.notes.reduce((a,n)=>a+(n.v/n.m),0)/total : 0;
+      document.getElementById('sub-subtitle').innerText = total 
+        ? `${total} évaluations · Moyenne ${(avg*data.scale).toFixed(1)}/${data.scale}`
+        : `Aucune évaluation pour l'instant`;
+      renderSubject();
+      showV('subject');
+    };
+
+    window.askDeleteSubject = async function() {
+      const m = data.m.find(x => x.id === activeId);
+      if(!m) return;
+      const confirmText = prompt(`Pour supprimer la matière "${m.name}", tape EXACTEMENT : SUPPRIMER MATIERE`);
+      if(confirmText === "SUPPRIMER MATIERE") {
+        data.m = data.m.filter(x => x.id !== activeId);
+        await saveUserData();
+        showV('dash');
+      }
+    };
+
+    window.openEvalModal = function() {
+      if(data.useCats) {
+        const sel = document.getElementById('in-n-type');
+        sel.innerHTML = data.cats.map(c => `<option value="${c}">${c}</option>`).join('');
+      }
+      document.getElementById('in-n-t').value = "";
+      document.getElementById('in-n-v').value = "";
+      document.getElementById('in-n-m').value = "";
+      document.getElementById('in-n-d').value = "";
+      document.getElementById('modal-eval').style.display = 'flex';
+    };
+    window.closeEvalModal = function() {
+      document.getElementById('modal-eval').style.display = 'none';
+    };
+
+    window.addN = async function() {
+      if(!user) { alert("Connecte-toi avec Google d'abord."); return; }
+      const v = parseFloat(document.getElementById('in-n-v').value);
+      const m = parseFloat(document.getElementById('in-n-m').value);
+      const d = document.getElementById('in-n-d').value;
+      const t = document.getElementById('in-n-t').value || "Évaluation";
+      const type = data.useCats ? (document.getElementById('in-n-type').value || data.cats[0]) : null;
+
+      if(isNaN(v) || isNaN(m) || !d) return;
+
+      const mat = data.m.find(x => x.id === activeId);
+      if(!mat) return;
+
+      mat.notes.push({ v, m, d, t, type });
+      await saveUserData();
+      closeEvalModal();
+      renderSubject();
+      renderDash();
+    };
+
+    function renderSubject() {
+      const m = data.m.find(x => x.id === activeId);
+      if(!m) return;
+
+      const list = document.getElementById('subject-evals-list');
+      const sorted = m.notes
+        .map((n, idx) => ({...n, _idx: idx}))
+        .sort((a,b)=> new Date(b.d)-new Date(a.d));
+
+      list.innerHTML = sorted.map(n => {
+        const perc = (n.v / n.m) * 100;
+        const color = perc < 50 ? '#ef4444' : '#16a34a';
+        return `
+          <div class="subject-eval-item" onclick="openEvalDetail(${n._idx})">
+            <div class="subject-eval-top">
+              <div>
+                <strong>${n.t}</strong>
+                <div class="subject-eval-meta">
+                  ${n.d}
+                  ${data.useCats && n.type ? ' · ' + n.type : ''}
+                </div>
+              </div>
+              <div style="font-weight:800; color:${color}; white-space:nowrap;">
+                ${n.v}/${n.m} (${perc.toFixed(0)}%)
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.openEvalDetail = function(idx) {
+      activeEvalIndex = idx;
+      const m = data.m.find(x => x.id === activeId);
+      if(!m) return;
+      const n = m.notes[idx];
+      if(!n) return;
+
+      document.getElementById('detail-title').innerText = n.t;
+      const perc = (n.v / n.m) * 100;
+      let meta = `${n.d} · ${n.v}/${n.m} (${perc.toFixed(0)}%)`;
+      if(data.useCats && n.type) meta = `${n.d} · ${n.type} · ${n.v}/${n.m} (${perc.toFixed(0)}%)`;
+      const metaEl = document.getElementById('detail-meta');
+      metaEl.innerText = meta;
+      metaEl.style.color = perc < 50 ? '#ef4444' : '#16a34a';
+
+      document.getElementById('modal-eval-detail').style.display = 'flex';
+    };
+
+    window.closeEvalDetail = function() {
+      document.getElementById('modal-eval-detail').style.display = 'none';
+    };
+
+    window.askDeleteEval = async function() {
+      const confirmText = prompt("Pour supprimer ce test, tape EXACTEMENT : SUPPRIMER TEST");
+      if(confirmText === "SUPPRIMER TEST") {
+        const m = data.m.find(x => x.id === activeId);
+        if(!m) return;
+        if(activeEvalIndex == null) return;
+        m.notes.splice(activeEvalIndex,1);
+        await saveUserData();
+        closeEvalDetail();
+        renderSubject();
+        renderDash();
+      }
+    };
+
+    function updateHeaderStats() {
+      const fId = document.getElementById('f-view').value;
+      let avgPerc = 0;
+      let count = 0;
+
+      if(fId === 'global' || fId === 'all') {
+        let globalPercSum = 0;
+        let subjectsWithNotes = 0;
+        data.m.forEach(m => {
+          if(!m.notes.length) return;
+          let mSum = 0;
+          m.notes.forEach(n => { mSum += (n.v/n.m); count++; });
+          const mAvg = mSum / m.notes.length;
+          globalPercSum += mAvg;
+          subjectsWithNotes++;
+        });
+        avgPerc = subjectsWithNotes ? (globalPercSum / subjectsWithNotes) : 0;
+      } else {
+        const m = data.m.find(x => x.id == fId);
+        if(m) {
+          count = m.notes.length;
+          let mSum = 0;
+          m.notes.forEach(n => { mSum += (n.v/n.m); });
+          avgPerc = count ? (mSum / count) : 0;
+        }
+      }
+
+      document.getElementById('g-avg').innerText = (avgPerc * data.scale).toFixed(2);
+      document.getElementById('g-perc').innerText = (avgPerc * 100).toFixed(1) + "%";
+      document.getElementById('g-count').innerText = count;
+    }
+
+    function getRange(mode, offset) {
+      const now = new Date();
+      let start, end;
+
+      if(mode === 'day') {
+        const d = new Date(now);
+        d.setDate(d.getDate() + offset);
+        start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+      } else if(mode === 'week') {
+        const d = new Date(now);
+        const day = d.getDay() || 7;
+        d.setDate(d.getDate() - day + 1 + offset*7);
+        start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        end = new Date(start);
+        end.setDate(end.getDate() + 7);
+      } else if(mode === 'month') {
+        const d = new Date(now);
+        d.setMonth(d.getMonth() + offset);
+        start = new Date(d.getFullYear(), d.getMonth(), 1);
+        end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      } else if(mode === 'year') {
+        const d = new Date(now);
+        d.setFullYear(d.getFullYear() + offset);
+        start = new Date(d.getFullYear(), 0, 1);
+        end = new Date(d.getFullYear() + 1, 0, 1);
+      } else {
+        const d = new Date(now);
+        let year = d.getFullYear();
+        if(d.getMonth() < 8) year--;
+        year += offset;
+        start = new Date(year, 8, 1);
+        end = new Date(year + 1, 8, 1);
+      }
+      return { start, end };
+    }
+
+    window.changeRange = function(delta) {
+      rangeOffset += delta;
+      renderGlobalChart();
+    };
+
+    window.resetRange = function() {
+      rangeOffset = 0;
+      renderGlobalChart();
+    };
+
+    window.onFilterChange = function() {
+      updateHeaderStats();
+      renderGlobalChart();
+    };
+
+    function renderDash() {
+      const list = document.getElementById('m-list');
+      const filter = document.getElementById('f-view');
+      const typeFilter = document.getElementById('f-type');
+
+      const lastF = filter.value || 'global';
+      const lastType = typeFilter.value || 'all';
+
+      list.innerHTML = '';
+      filter.innerHTML = `
+        <option value="global">Moyenne globale</option>
+        <option value="all">Toutes les matières</option>
+      `;
+      typeFilter.innerHTML = '<option value="all">Tous les types</option>' + 
+        (data.useCats ? data.cats.map(c => `<option value="${c}">${c}</option>`).join('') : '');
+
+      document.getElementById('cfg-scale').value = data.scale;
+      document.getElementById('g-avg-scale').innerText = "/ " + data.scale;
+
+      data.m.forEach(m => {
+        filter.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+        let mSum = 0;
+        m.notes.forEach(n => { mSum += (n.v/n.m); });
+        const avgPerc = m.notes.length ? (mSum / m.notes.length) : 0;
+        const total = m.notes.length;
+        const color = avgPerc < 0.5 ? '#ef4444' : '#16a34a';
+
+        list.innerHTML += `
+          <div class="m-card" style="border-top-color:${m.color}" 
+               onclick="openSubject(${m.id})">
+            <span class="stat-label">${m.name}</span>
+            <div class="stat-val" style="color:${color}">
+              ${(avgPerc * data.scale).toFixed(1)} 
+              <small style="font-size:1rem; color:var(--muted)">/ ${data.scale}</small>
+            </div>
+            <div style="margin-top:8px; font-weight:600; font-size:0.9rem; color:var(--success)">
+              ${(avgPerc * 100).toFixed(0)}% de réussite
+            </div>
+            <div style="margin-top:6px; font-size:0.85rem; color:var(--muted)">
+              ${total} évaluation(s)
+            </div>
+          </div>
+        `;
+      });
+
+      filter.value = lastF;
+      typeFilter.value = lastType;
+      document.getElementById('f-type').style.display = data.useCats ? 'inline-block' : 'none';
+
+      updateHeaderStats();
+      renderGlobalChart();
+    }
+
+    function renderGlobalChart() {
+      const canvas = document.getElementById('mainChart');
+      if(!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const fId = document.getElementById('f-view').value;
+      const typeFilter = document.getElementById('f-type').value;
+      const mode = document.getElementById('time-mode').value;
+      if(globalChart) globalChart.destroy();
+
+      const { start, end } = getRange(mode, rangeOffset);
+      let datasets = [];
+
+      if (fId === 'global') {
+        const dayMap = {};
+        data.m.forEach(m => {
+          m.notes.forEach(n => {
+            if(data.useCats && typeFilter !== 'all' && (n.type || data.cats[0]) !== typeFilter) return;
+            const d = new Date(n.d);
+            if(d < start || d >= end) return;
+            const key = d.toISOString().slice(0,10);
+            if(!dayMap[key]) dayMap[key] = [];
+            dayMap[key].push(n.v / n.m);
+          });
+        });
+        const dataPoints = Object.keys(dayMap).map(k => {
+          const vals = dayMap[k];
+          const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+          return { x: new Date(k), y: avg * 100 };
+        }).sort((a,b)=>a.x-b.x);
+
+        datasets.push({
+          label: 'Moyenne globale',
+          data: dataPoints,
+          borderColor: '#000',
+          backgroundColor: 'rgba(0,0,0,0.08)',
+          borderWidth: 3,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: "#000"
+        });
+      } else if (fId === 'all') {
+        data.m.forEach(m => {
+          const dayMap = {};
+          m.notes.forEach(n => {
+            if(data.useCats && typeFilter !== 'all' && (n.type || data.cats[0]) !== typeFilter) return;
+            const d = new Date(n.d);
+            if(d < start || d >= end) return;
+            const key = d.toISOString().slice(0,10);
+            if(!dayMap[key]) dayMap[key] = [];
+            dayMap[key].push(n.v / n.m);
+          });
+          const dataPoints = Object.keys(dayMap).map(k => {
+            const vals = dayMap[k];
+            const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+            return { x: new Date(k), y: avg * 100 };
+          }).sort((a,b)=>a.x-b.x);
+          if(dataPoints.length) {
+            datasets.push({
+              label: m.name,
+              data: dataPoints,
+              borderColor: m.color,
+              backgroundColor: m.color + '22',
+              borderWidth: 3,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: "#000"
+            });
+          }
+        });
+      } else {
+        const m = data.m.find(x => x.id == fId);
+        if(m) {
+          const dayMap = {};
+          m.notes.forEach(n => {
+            if(data.useCats && typeFilter !== 'all' && (n.type || data.cats[0]) !== typeFilter) return;
+            const d = new Date(n.d);
+            if(d < start || d >= end) return;
+            const key = d.toISOString().slice(0,10);
+            if(!dayMap[key]) dayMap[key] = [];
+            dayMap[key].push(n.v / n.m);
+          });
+          const dataPoints = Object.keys(dayMap).map(k => {
+            const vals = dayMap[k];
+            const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+            return { x: new Date(k), y: avg * 100 };
+          }).sort((a,b)=>a.x-b.x);
+
+          datasets.push({
+            label: m.name,
+            data: dataPoints,
+            borderColor: m.color,
+            backgroundColor: m.color + '22',
+            borderWidth: 3,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: "#000"
+          });
+        }
+      }
+
+      if (datasets.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      globalChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          parsing: false,
+          scales: {
+            x: { 
+              type: 'time',
+              min: start,
+              max: end,
+              time: { 
+                unit: (mode === 'year' || mode === 'school') ? 'month' : 'day',
+                tooltipFormat: 'dd/MM/yyyy'
+              },
+              grid: { display: false }
+            },
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: '#f1f5f9' },
+              ticks: { callback: v => v + '%' }
+            }
+          },
+          plugins: {
+            legend: { display: true },
+            zoom: {
+              zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+              pan: { enabled: true, mode: 'x' }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
